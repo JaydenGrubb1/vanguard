@@ -19,16 +19,16 @@ add_executable(
 	src/main.cpp
 )
 
-# find_package(Example REQUIRED)
+find_package(SDL3 REQUIRED)
 
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/include
-	# ${Example_INCLUDE_DIRS}
+	${SDL3_INCLUDE_DIRS}
 )
 
 target_link_libraries(
 	${PROJECT_NAME}
-	# ${Example_LIBRARIES}
+	${SDL3_LIBRARIES}
 )
 
 if (CMAKE_IMPORT_LIBRARY_SUFFIX)

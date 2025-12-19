@@ -1,3 +1,5 @@
+#include <SDL3/SDL_main.h>
+
 #include <cstdlib>
 #include <print>
 #include <vector>

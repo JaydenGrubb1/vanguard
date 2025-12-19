@@ -1,5 +1,7 @@
 #pragma once
 
+#include <SDL3/SDL.h>
+
 #include <span>
 #include <string_view>
 
@@ -15,6 +17,8 @@ class App {
 
   private:
 	bool m_running = false;
+
+	SDL_Window* m_window = nullptr;
 };
 
 } // namespace vg
