@@ -7,28 +7,42 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_compile_options(
-	-Wall
-	-Wextra
-	-Wpedantic
-	-Wold-style-cast
+	/W4
+	/permissive-
+	/EHsc
+)
+
+add_compile_definitions(
+	NOMINMAX
+	WIN32_LEAN_AND_MEAN
+	_CRT_SECURE_NO_WARNINGS
+	_CRT_NONSTDC_NO_WARNINGS
 )
 
 add_executable(
 	${PROJECT_NAME}
+	src/backends/dx12/device.cpp
+	src/gfx/device.cpp
 	src/app.cpp
 	src/main.cpp
 )
 
 find_package(SDL3 REQUIRED)
 
+add_subdirectory(extern/nvrhi)
+
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/include
-	${SDL3_INCLUDE_DIRS}
+	${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 target_link_libraries(
-	${PROJECT_NAME}
-	${SDL3_LIBRARIES}
+	${PROJECT_NAME} PRIVATE
+	SDL3::SDL3
+	nvrhi_d3d12
+	nvrhi
+	dxgi
+	d3d12
 )
 
 if (CMAKE_IMPORT_LIBRARY_SUFFIX)

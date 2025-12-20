@@ -5,11 +5,13 @@
 #include <span>
 #include <string_view>
 
+#include "gfx/device.hpp"
+
 namespace vg {
 
 class App {
   public:
-	App(std::span<const std::string_view> args);
+	explicit App(std::span<const std::string_view> args);
 	~App();
 
 	void run();
@@ -19,6 +21,8 @@ class App {
 	bool m_running = false;
 
 	SDL_Window* m_window = nullptr;
+
+	std::unique_ptr<gfx::IDevice> m_device;
 };
 
 } // namespace vg

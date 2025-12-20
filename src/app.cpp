@@ -17,6 +17,8 @@ App::App(std::span<const std::string_view> args) {
 	m_window = SDL_CreateWindow("Vanguard", 1600, 900, SDL_WINDOW_RESIZABLE);
 	if (m_window == nullptr)
 		throw std::runtime_error("Failed to create window");
+
+	m_device = gfx::IDevice::create();
 }
 
 App::~App() {
