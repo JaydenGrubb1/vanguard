@@ -104,7 +104,7 @@ DX12Device::DX12Device() {
 DX12Device::~DX12Device() {
 	if (m_handle) {
 		m_handle->waitForIdle();
-		m_handle.Reset();
+		IDevice::~IDevice(); // this feels wrong
 	}
 
 #ifndef NDEBUG
@@ -185,6 +185,7 @@ void DX12Device::resize_swapchain() {
 		return;
 	}
 
+	destroy_framebuffers();
 	destroy_render_targets();
 
 	HWND window;
@@ -204,6 +205,7 @@ void DX12Device::resize_swapchain() {
 	);
 
 	create_render_targets();
+	create_framebuffers();
 }
 
 void DX12Device::create_render_targets() {

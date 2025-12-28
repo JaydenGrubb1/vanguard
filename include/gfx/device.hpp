@@ -29,8 +29,17 @@ class IDevice : public nvrhi::IMessageCallback {
 	virtual nvrhi::TextureHandle get_buffer(u32 index) = 0;
 	virtual nvrhi::DeviceHandle get_device() = 0;
 
+	nvrhi::FramebufferHandle begin_frame();
+	void end_frame();
+
   private: // nvrhi::IMessageCallback
 	void message(nvrhi::MessageSeverity severity, const char* text) override;
+
+  protected:
+	void create_framebuffers();
+	void destroy_framebuffers();
+
+	std::vector<nvrhi::FramebufferHandle> m_framebuffers;
 };
 
 } // namespace vg::gfx
