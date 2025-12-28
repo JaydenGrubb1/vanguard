@@ -26,6 +26,10 @@
 *.a
 *.lib
 
+# Compiled shader binaries
+*.dxil
+*.spv
+
 # Executables
 *.exe
 *.out
