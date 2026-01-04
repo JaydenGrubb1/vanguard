@@ -30,10 +30,12 @@ add_executable(
 find_package(SDL3 REQUIRED)
 
 add_subdirectory(extern/nvrhi)
+add_subdirectory(extern/glm)
 
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/include
 	${CMAKE_CURRENT_SOURCE_DIR}/src
+	extern/glm
 )
 
 target_link_libraries(
