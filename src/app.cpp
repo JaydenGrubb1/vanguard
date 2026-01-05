@@ -41,8 +41,8 @@ App::App(std::span<const std::string_view> args) {
 
 	std::println("current_path: {}", std::filesystem::current_path().string());
 
-	auto vertex_shader_code = load_shader("../../shaders/basic.vert.dxil");
-	auto fragment_shader_code = load_shader("../../shaders/basic.frag.dxil");
+	auto vertex_shader_code = load_shader("shaders/basic.vs.dxil");
+	auto fragment_shader_code = load_shader("shaders/basic.ps.dxil");
 
 	m_device = gfx::IDevice::create();
 	m_device->create_swapchain(m_window);

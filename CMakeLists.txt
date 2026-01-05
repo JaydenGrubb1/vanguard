@@ -59,3 +59,91 @@ add_custom_target(run
 	DEPENDS ${PROJECT_NAME}
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+find_program(DXC_EXECUTABLE dxc REQUIRED)
+
+set(SHADER_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/shaders)
+set(SHADER_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/shaders)
+
+file(GLOB_RECURSE SHADER_FILES
+	CONFIGURE_DEPENDS
+	${SHADER_SOURCE_DIR}/*.hlsl
+)
+
+set(COMPILED_SHADERS)
+
+foreach (SHADER ${SHADER_FILES})
+	file(RELATIVE_PATH REL_PATH ${SHADER_SOURCE_DIR} ${SHADER})
+	get_filename_component(SHADER_NAME ${REL_PATH} NAME_WE)
+	get_filename_component(SHADER_DIR ${REL_PATH} DIRECTORY)
+
+	set(OUT_DIR ${SHADER_OUTPUT_DIR}/${SHADER_DIR})
+	file(MAKE_DIRECTORY ${OUT_DIR})
+
+	string(TOLOWER ${SHADER} SHADER_LOWER)
+
+	if (SHADER_LOWER MATCHES "\\.vs")
+		set(OUT_FILE ${OUT_DIR}/${SHADER_NAME}.vs.dxil)
+
+		add_custom_command(
+			OUTPUT ${OUT_FILE}
+			COMMAND ${DXC_EXECUTABLE}
+			-T vs_6_6
+			-E VSmain
+			-Fo ${OUT_FILE}
+			${SHADER}
+			DEPENDS ${SHADER}
+			COMMENT "Compiling VS ${REL_PATH}"
+		)
+
+		list(APPEND COMPILED_SHADERS ${OUT_FILE})
+	elseif (SHADER_LOWER MATCHES "\\.ps")
+		set(OUT_FILE ${OUT_DIR}/${SHADER_NAME}.ps.dxil)
+
+		add_custom_command(
+			OUTPUT ${OUT_FILE}
+			COMMAND ${DXC_EXECUTABLE}
+			-T ps_6_6
+			-E PSmain
+			-Fo ${OUT_FILE}
+			${SHADER}
+			DEPENDS ${SHADER}
+			COMMENT "Compiling PS ${REL_PATH}"
+		)
+
+		list(APPEND COMPILED_SHADERS ${OUT_FILE})
+	else ()
+		set(OUT_FILE_VS ${OUT_DIR}/${SHADER_NAME}.vs.dxil)
+		set(OUT_FILE_PS ${OUT_DIR}/${SHADER_NAME}.ps.dxil)
+
+		add_custom_command(
+			OUTPUT ${OUT_FILE_VS}
+			COMMAND ${DXC_EXECUTABLE}
+			-T vs_6_6
+			-E VSmain
+			-Fo ${OUT_FILE_VS}
+			${SHADER}
+			DEPENDS ${SHADER}
+			COMMENT "Compiling VS ${REL_PATH}"
+		)
+
+		add_custom_command(
+			OUTPUT ${OUT_FILE_PS}
+			COMMAND ${DXC_EXECUTABLE}
+			-T ps_6_6
+			-E PSmain
+			-Fo ${OUT_FILE_PS}
+			${SHADER}
+			DEPENDS ${SHADER}
+			COMMENT "Compiling PS ${REL_PATH}"
+		)
+
+		list(APPEND COMPILED_SHADERS ${OUT_FILE_VS} ${OUT_FILE_PS})
+	endif ()
+endforeach ()
+
+add_custom_target(shaders ALL
+	DEPENDS ${COMPILED_SHADERS}
+)
+
+add_dependencies(${PROJECT_NAME} shaders)
