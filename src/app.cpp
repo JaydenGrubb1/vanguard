@@ -1,3 +1,6 @@
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_RIGHT_HANDED
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/mat4x4.hpp>
 
 #include <nvrhi/utils.h>
@@ -26,6 +29,16 @@ static std::vector<std::byte> load_shader(const std::filesystem::path& path) {
 
 	return shader;
 }
+
+struct PushConstants {
+	glm::mat4 model;
+	glm::vec4 tint;
+};
+
+struct UniformBuffer {
+	glm::mat4 view;
+	glm::mat4 projection;
+};
 
 App::App(std::span<const std::string_view> args) {
 	for (auto [idx, arg] : std::views::enumerate(args)) {
@@ -98,7 +111,8 @@ App::App(std::span<const std::string_view> args) {
 
 	nvrhi::BindingLayoutDesc layout_desc = {};
 	layout_desc.setVisibility(nvrhi::ShaderType::All);
-	layout_desc.addItem(nvrhi::BindingLayoutItem::VolatileConstantBuffer(0));
+	layout_desc.addItem(nvrhi::BindingLayoutItem::PushConstants(0, sizeof(PushConstants)));
+	layout_desc.addItem(nvrhi::BindingLayoutItem::VolatileConstantBuffer(1));
 	layout_desc.addItem(nvrhi::BindingLayoutItem::Texture_SRV(0));
 	layout_desc.addItem(nvrhi::BindingLayoutItem::Sampler(0));
 
@@ -109,12 +123,14 @@ App::App(std::span<const std::string_view> args) {
 	pipeline_desc.setVertexShader(vertex_shader);
 	pipeline_desc.setFragmentShader(fragment_shader);
 	pipeline_desc.addBindingLayout(binding_layout);
+	
+	pipeline_desc.renderState.rasterState.setCullNone();
 
 	m_pipeline = m_device->get_device()->createGraphicsPipeline(pipeline_desc, framebuffer_info);
 	m_command_list = m_device->get_device()->createCommandList();
 
 	nvrhi::BufferDesc constant_buffer_desc = {};
-	constant_buffer_desc.setByteSize(sizeof(glm::mat4x4));
+	constant_buffer_desc.setByteSize(sizeof(UniformBuffer));
 	constant_buffer_desc.setIsConstantBuffer(true);
 	constant_buffer_desc.setIsVolatile(true);
 	constant_buffer_desc.setMaxVersions(16);
@@ -154,7 +170,8 @@ App::App(std::span<const std::string_view> args) {
 	m_sampler = m_device->get_device()->createSampler(sampler_desc);
 
 	nvrhi::BindingSetDesc binding_set_desc = {};
-	binding_set_desc.addItem(nvrhi::BindingSetItem::ConstantBuffer(0, m_constant_buffer));
+	binding_set_desc.addItem(nvrhi::BindingSetItem::PushConstants(0, sizeof(PushConstants)));
+	binding_set_desc.addItem(nvrhi::BindingSetItem::ConstantBuffer(1, m_constant_buffer));
 	binding_set_desc.addItem(nvrhi::BindingSetItem::Texture_SRV(0, m_texture));
 	binding_set_desc.addItem(nvrhi::BindingSetItem::Sampler(0, m_sampler));
 
@@ -178,6 +195,7 @@ App::~App() {
 
 void App::run() {
 	m_running = true;
+	float time = 0;
 
 	while (m_running) {
 		SDL_Event event;
@@ -197,16 +215,21 @@ void App::run() {
 
 		// render frame
 		auto framebuffer = m_device->begin_frame();
-		const float width = static_cast<float>(framebuffer->getFramebufferInfo().width);
-		const float height = static_cast<float>(framebuffer->getFramebufferInfo().height);
+		const auto width = static_cast<float>(framebuffer->getFramebufferInfo().width);
+		const auto height = static_cast<float>(framebuffer->getFramebufferInfo().height);
 
 		m_command_list->open();
 
 		nvrhi::utils::ClearColorAttachment(m_command_list, framebuffer, 0, nvrhi::Color(0.f));
 		nvrhi::utils::ClearDepthStencilAttachment(m_command_list, framebuffer, 1.0f, 0);
 
-		auto mvp = glm::mat4x4(1.0f);
-		m_command_list->writeBuffer(m_constant_buffer, &mvp, sizeof(glm::mat4x4));
+		PushConstants push_constants = {};
+		UniformBuffer uniform_buffer = {};
+
+		uniform_buffer.view = glm::lookAt(glm::vec3(2, 1.8, 5), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+		uniform_buffer.projection = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 1000.f);
+
+		m_command_list->writeBuffer(m_constant_buffer, &uniform_buffer, sizeof(UniformBuffer));
 
 		nvrhi::GraphicsState state;
 		state.setPipeline(m_pipeline);
@@ -219,12 +242,29 @@ void App::run() {
 		state.addVertexBuffer({m_vertex_buffer, 1, offsetof(Vertex, uv)});
 
 		m_command_list->setGraphicsState(state);
+
+		push_constants.tint = glm::vec4(1.f);
+		push_constants.model = 1.f;
+		push_constants.model = glm::rotate(push_constants.model, time * glm::radians(90.f), glm::vec3(0, 1, 0));
+
+		m_command_list->setPushConstants(&push_constants, sizeof(PushConstants));
+		m_command_list->drawIndexed(nvrhi::DrawArguments().setVertexCount(static_cast<u32>(m_indices.size())));
+
+		push_constants.tint = glm::vec4(.1f, .1f, .1f, 1.f);
+		push_constants.model = 1.f;
+		push_constants.model = glm::translate(push_constants.model, glm::vec3(0, -1.5, 0));
+		push_constants.model = glm::rotate(push_constants.model, glm::radians(-90.f), glm::vec3(1, 0, 0));
+		push_constants.model = glm::scale(push_constants.model, glm::vec3(20.f));
+
+		m_command_list->setPushConstants(&push_constants, sizeof(PushConstants));
 		m_command_list->drawIndexed(nvrhi::DrawArguments().setVertexCount(static_cast<u32>(m_indices.size())));
 
 		m_command_list->close();
 
 		m_device->get_device()->executeCommandList(m_command_list);
 		m_device->end_frame();
+
+		time += 1.0f / 60.0f;
 	}
 }
 
