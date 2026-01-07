@@ -94,6 +94,7 @@ App::App(std::span<const std::string_view> args) {
 
 	nvrhi::FramebufferInfo framebuffer_info = {};
 	framebuffer_info.addColorFormat(nvrhi::Format::SRGBA8_UNORM);
+	framebuffer_info.setDepthFormat(nvrhi::Format::D32);
 
 	nvrhi::BindingLayoutDesc layout_desc = {};
 	layout_desc.setVisibility(nvrhi::ShaderType::All);
@@ -108,13 +109,6 @@ App::App(std::span<const std::string_view> args) {
 	pipeline_desc.setVertexShader(vertex_shader);
 	pipeline_desc.setFragmentShader(fragment_shader);
 	pipeline_desc.addBindingLayout(binding_layout);
-
-	nvrhi::DepthStencilState ds = {};
-	ds.depthTestEnable = false;
-	ds.depthWriteEnable = false;
-	ds.stencilEnable = false;
-
-	pipeline_desc.renderState.setDepthStencilState(ds);
 
 	m_pipeline = m_device->get_device()->createGraphicsPipeline(pipeline_desc, framebuffer_info);
 	m_command_list = m_device->get_device()->createCommandList();
@@ -209,6 +203,7 @@ void App::run() {
 		m_command_list->open();
 
 		nvrhi::utils::ClearColorAttachment(m_command_list, framebuffer, 0, nvrhi::Color(0.f));
+		nvrhi::utils::ClearDepthStencilAttachment(m_command_list, framebuffer, 1.0f, 0);
 
 		auto mvp = glm::mat4x4(1.0f);
 		m_command_list->writeBuffer(m_constant_buffer, &mvp, sizeof(glm::mat4x4));

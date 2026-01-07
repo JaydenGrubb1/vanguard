@@ -34,12 +34,14 @@ class IDevice : public nvrhi::IMessageCallback {
 
   private: // nvrhi::IMessageCallback
 	void message(nvrhi::MessageSeverity severity, const char* text) override;
+	void create_depth_buffer(u32 width, u32 height);
 
   protected:
 	void create_framebuffers();
 	void destroy_framebuffers();
 
 	std::vector<nvrhi::FramebufferHandle> m_framebuffers;
+	nvrhi::TextureHandle m_depth_texture;
 };
 
 } // namespace vg::gfx
