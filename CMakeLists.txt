@@ -23,6 +23,8 @@ add_executable(
 	${PROJECT_NAME}
 	src/backends/dx12/device.cpp
 	src/gfx/device.cpp
+	src/gfx/render_pass.cpp
+	src/gfx/renderer.cpp
 	src/app.cpp
 	src/main.cpp
 )
