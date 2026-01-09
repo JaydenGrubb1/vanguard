@@ -25,6 +25,7 @@ add_executable(
 	src/gfx/device.cpp
 	src/gfx/render_pass.cpp
 	src/gfx/renderer.cpp
+	src/gfx/shader.cpp
 	src/app.cpp
 	src/main.cpp
 )

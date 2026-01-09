@@ -17,6 +17,7 @@ class DX12Device final : public IDevice {
 	void create_swapchain(SDL_Window* window) override;
 	void destroy_swapchain() override;
 	void resize_swapchain() override;
+	void get_swapchain_size(u32& width, u32& height) override;
 
 	void create_render_targets() override;
 	void destroy_render_targets() override;

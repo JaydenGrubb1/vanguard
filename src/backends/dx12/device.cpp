@@ -208,6 +208,11 @@ void DX12Device::resize_swapchain() {
 	create_framebuffers();
 }
 
+void DX12Device::get_swapchain_size(u32& width, u32& height) {
+	width = m_swapchain_desc.Width;
+	height = m_swapchain_desc.Height;
+}
+
 void DX12Device::create_render_targets() {
 	m_swapchain_buffers.resize(m_swapchain_desc.BufferCount);
 	m_swapchain_textures.resize(m_swapchain_desc.BufferCount);

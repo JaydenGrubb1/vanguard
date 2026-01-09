@@ -1,16 +1,14 @@
 #include "gfx/render_pass.hpp"
+#include "gfx/renderer.hpp"
 
 namespace vg::gfx {
 
-void IRenderPass::init(nvrhi::IDevice* device) {
+void IRenderPass::init(nvrhi::IDevice*, u32, u32) {
 	// NOOP
-	std::ignore = device;
 }
 
-void IRenderPass::render(nvrhi::IFramebuffer* framebuffer, nvrhi::ICommandList* command_list) {
+void IRenderPass::render(nvrhi::ICommandList*, RenderPassContext&) {
 	// NOOP
-	std::ignore = framebuffer;
-	std::ignore = command_list;
 }
 
 } // namespace vg::gfx

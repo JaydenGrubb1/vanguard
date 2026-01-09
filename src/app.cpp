@@ -9,17 +9,44 @@
 
 namespace vg {
 
-class ClearColorPass : public gfx::IRenderPass {
+class GeometryPass : public gfx::IRenderPass {
   public:
-	explicit ClearColorPass(const nvrhi::Color color = nvrhi::Color(0.f)) : m_color(color) {}
+	void init(nvrhi::IDevice* device, const u32 width, const u32 height) override {
+		auto desc =
+			nvrhi::TextureDesc()
+				.setDimension(nvrhi::TextureDimension::Texture2D)
+				.setWidth(width)
+				.setHeight(height)
+				.setIsRenderTarget(true)
+				.setKeepInitialState(true);
 
-	void render(nvrhi::IFramebuffer* framebuffer, nvrhi::ICommandList* command_list) override {
-		nvrhi::utils::ClearColorAttachment(command_list, framebuffer, 0, m_color);
-		nvrhi::utils::ClearDepthStencilAttachment(command_list, framebuffer, 1.f, 0);
+		m_color = device->createTexture(
+			desc.setDebugName("clear_pass_color")
+				.setFormat(nvrhi::Format::RGBA16_FLOAT)
+				.setInitialState(nvrhi::ResourceStates::RenderTarget)
+		);
+		m_depth = device->createTexture(
+			desc.setDebugName("clear_color_depth")
+				.setFormat(nvrhi::Format::D32)
+				.setInitialState(nvrhi::ResourceStates::DepthWrite)
+		);
+
+		m_framebuffer =
+			device->createFramebuffer(nvrhi::FramebufferDesc().addColorAttachment(m_color).setDepthAttachment(m_depth));
+	}
+
+	void render(nvrhi::ICommandList* command_list, gfx::RenderPassContext& ctx) override {
+		nvrhi::utils::ClearColorAttachment(command_list, m_framebuffer, 0, nvrhi::Color(1.0f, 0.0f, 0.0f, 1.0f));
+		nvrhi::utils::ClearDepthStencilAttachment(command_list, m_framebuffer, 1.0f, 0);
+
+		ctx.set_resource("color", m_color);
+		ctx.set_resource("depth", m_depth);
 	}
 
   private:
-	nvrhi::Color m_color;
+	nvrhi::TextureHandle m_color;
+	nvrhi::TextureHandle m_depth;
+	nvrhi::FramebufferHandle m_framebuffer;
 };
 
 App::App(std::span<const std::string_view> args) {
@@ -33,6 +60,7 @@ App::App(std::span<const std::string_view> args) {
 	m_window = SDL_CreateWindow("Vanguard", 1600, 900, SDL_WINDOW_RESIZABLE);
 	if (m_window == nullptr)
 		throw std::runtime_error("Failed to create window");
+	SDL_SetWindowMinimumSize(m_window, 255, 255);
 
 	std::println("current_path: {}", std::filesystem::current_path().string());
 
@@ -41,7 +69,7 @@ App::App(std::span<const std::string_view> args) {
 	m_device->resize_swapchain();
 
 	m_renderer = std::make_unique<gfx::Renderer>(*m_device);
-	m_renderer->add_render_pass<ClearColorPass>(nvrhi::Color(1.f, 0.f, 0.f, 1.f));
+	m_renderer->add_render_pass<GeometryPass>(gfx::RenderPassInfo().set_name("clear_color"));
 	m_renderer->init();
 }
 
@@ -74,6 +102,7 @@ void App::run() {
 					break;
 				case SDL_EVENT_WINDOW_RESIZED:
 					m_device->resize_swapchain();
+					m_renderer->init();
 					break;
 				default:
 					break;
