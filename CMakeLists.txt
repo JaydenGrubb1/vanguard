@@ -6,6 +6,9 @@ enable_language(CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(VG_BACKEND_DX12 ON CACHE BOOL "Enable DX12 backend")
+set(VG_BACKEND_VULKAN ON CACHE BOOL "Enable Vulkan backend")
+
 add_compile_options(
 	/W4
 	/permissive-
@@ -21,7 +24,6 @@ add_compile_definitions(
 
 add_executable(
 	${PROJECT_NAME}
-	src/backends/dx12/device.cpp
 	src/gfx/device.cpp
 	src/app.cpp
 	src/main.cpp
@@ -41,11 +43,41 @@ include_directories(
 target_link_libraries(
 	${PROJECT_NAME} PRIVATE
 	SDL3::SDL3
-	nvrhi_d3d12
-	nvrhi
-	dxgi
-	d3d12
 )
+
+if (VG_BACKEND_DX12)
+	target_sources(
+		${PROJECT_NAME} PRIVATE
+		src/backends/dx12/device.cpp
+	)
+	target_compile_definitions(
+		${PROJECT_NAME} PRIVATE
+		VG_BACKEND_DX12
+	)
+	target_link_libraries(
+		${PROJECT_NAME} PRIVATE
+		nvrhi_d3d12
+		nvrhi
+		dxgi
+		d3d12
+	)
+endif ()
+if (VG_BACKEND_VULKAN)
+	target_sources(
+		${PROJECT_NAME} PRIVATE
+		src/backends/vulkan/device.cpp
+	)
+	target_compile_definitions(
+		${PROJECT_NAME} PRIVATE
+		VG_BACKEND_VULKAN
+	)
+	target_link_libraries(
+		${PROJECT_NAME} PRIVATE
+		nvrhi_vk
+		nvrhi
+		Vulkan-Headers
+	)
+endif ()
 
 if (CMAKE_IMPORT_LIBRARY_SUFFIX)
 	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

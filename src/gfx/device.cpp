@@ -1,12 +1,23 @@
 #include <print>
 
-#include "backends/dx12/device.hpp"
+#ifdef VG_BACKEND_DX12
+	#include "backends/dx12/device.hpp"
+#endif
+#ifdef VG_BACKEND_VULKAN
+	#include "backends/vulkan/device.hpp"
+#endif
+
 #include "gfx/device.hpp"
 
 namespace vg::gfx {
 
 std::unique_ptr<IDevice> IDevice::create() {
+#ifdef VG_BACKEND_DX12
 	return std::make_unique<DX12Device>();
+#endif
+#ifdef VG_BACKEND_VULKAN
+	return std::make_unique<VulkanDevice>();
+#endif
 }
 
 void IDevice::message(const nvrhi::MessageSeverity severity, const char* text) {
