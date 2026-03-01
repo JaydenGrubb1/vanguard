@@ -36,10 +36,28 @@ class VulkanDevice final : public IDevice {
 	nvrhi::DeviceHandle get_device() override;
 
   private:
+	nvrhi::DeviceHandle m_handle;
+
 	std::unique_ptr<VkDynamicLoader> m_loader;
+
+	std::vector<const char*> m_instance_layers;
+	std::vector<const char*> m_instance_extensions;
+	std::vector<const char*> m_device_extensions;
 
 	vk::Instance m_instance;
 	vk::DebugUtilsMessengerEXT m_debug;
+	vk::PhysicalDevice m_physical_device;
+	vk::Device m_device;
+
+	int m_graphics_queue_index = -1;
+	int m_compute_queue_index = -1;
+	int m_transfer_queue_index = -1;
+	int m_present_queue_index = -1;
+
+	vk::Queue m_graphics_queue;
+	vk::Queue m_compute_queue;
+	vk::Queue m_transfer_queue;
+	vk::Queue m_present_queue;
 };
 
 } // namespace vg::gfx

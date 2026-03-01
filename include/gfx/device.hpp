@@ -32,7 +32,7 @@ class IDevice : public nvrhi::IMessageCallback {
 	nvrhi::FramebufferHandle begin_frame();
 	void end_frame();
 
-  private: // nvrhi::IMessageCallback
+  private:
 	void message(nvrhi::MessageSeverity severity, const char* text) override;
 	void create_depth_buffer(u32 width, u32 height);
 

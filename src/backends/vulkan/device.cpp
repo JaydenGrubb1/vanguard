@@ -1,8 +1,10 @@
+#include <SDL3/SDL_vulkan.h>
 #include <nvrhi/validation.h>
 #include <nvrhi/vulkan.h>
 
 #include <print>
 #include <stdexcept>
+#include <unordered_set>
 
 #include "backends/vulkan/device.hpp"
 
@@ -72,18 +74,19 @@ VulkanDevice::VulkanDevice() {
 		throw std::runtime_error("Vulkan variant is not supported");
 	}
 
-	std::vector<const char*> instance_layers;
-	std::vector<const char*> instance_extensions;
-
 #ifndef NDEBUG
-	instance_layers.push_back("VK_LAYER_KHRONOS_validation");
-	instance_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+	m_instance_layers.push_back("VK_LAYER_KHRONOS_validation");
+	m_instance_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
+
+	u32 sdl_extension_count = 0;
+	auto sdl_extensions = SDL_Vulkan_GetInstanceExtensions(&sdl_extension_count);
+	m_instance_extensions.append_range(std::span(sdl_extensions, sdl_extension_count));
 
 	auto info =
 		vk::InstanceCreateInfo()
-			.setPEnabledLayerNames(instance_layers)
-			.setPEnabledExtensionNames(instance_extensions)
+			.setPEnabledLayerNames(m_instance_layers)
+			.setPEnabledExtensionNames(m_instance_extensions)
 			.setPApplicationInfo(&app);
 
 #ifndef NDEBUG
@@ -108,6 +111,72 @@ VulkanDevice::VulkanDevice() {
 
 #ifndef NDEBUG
 	std::ignore = m_instance.createDebugUtilsMessengerEXT(&debug, nullptr, &m_debug);
+#endif
+
+	m_physical_device = m_instance.enumeratePhysicalDevices().front(); // lazy
+
+	m_graphics_queue_index = m_compute_queue_index = m_transfer_queue_index = m_present_queue_index = 0; // lazy
+
+	const std::unordered_set unique_queue_families = {
+		m_graphics_queue_index,
+		m_compute_queue_index,
+		m_transfer_queue_index,
+		m_present_queue_index,
+	};
+
+	std::vector<vk::DeviceQueueCreateInfo> queue_create_infos;
+	queue_create_infos.reserve(unique_queue_families.size());
+
+	for (int index : unique_queue_families) {
+		constexpr float priority = 1.0f;
+		queue_create_infos.push_back(
+			vk::DeviceQueueCreateInfo().setQueueFamilyIndex(index).setQueueCount(1).setQueuePriorities(priority)
+		);
+	}
+
+	vk::PhysicalDeviceFeatures device_features;
+	device_features.samplerAnisotropy = true;
+
+	vk::PhysicalDeviceVulkan12Features vk12_features;
+	vk12_features.timelineSemaphore = true;
+
+	auto device =
+		vk::DeviceCreateInfo()
+			.setQueueCreateInfos(queue_create_infos)
+			.setPEnabledFeatures(&device_features)
+			.setPEnabledExtensionNames(m_device_extensions)
+			.setPNext(&vk12_features);
+
+	std::ignore = m_physical_device.createDevice(&device, nullptr, &m_device);
+	VULKAN_HPP_DEFAULT_DISPATCHER.init(m_device);
+
+	m_device.getQueue(m_graphics_queue_index, 0, &m_graphics_queue);
+	m_device.getQueue(m_compute_queue_index, 0, &m_compute_queue);
+	m_device.getQueue(m_transfer_queue_index, 0, &m_transfer_queue);
+	m_device.getQueue(m_present_queue_index, 0, &m_present_queue);
+
+	nvrhi::vulkan::DeviceDesc desc;
+	desc.errorCB = this;
+	desc.instance = m_instance;
+	desc.physicalDevice = m_physical_device;
+	desc.device = m_device;
+
+	desc.instanceExtensions = m_instance_extensions.data();
+	desc.numInstanceExtensions = m_instance_extensions.size();
+	desc.deviceExtensions = m_device_extensions.data();
+	desc.numDeviceExtensions = m_device_extensions.size();
+
+	desc.graphicsQueueIndex = m_graphics_queue_index;
+	desc.computeQueueIndex = m_compute_queue_index;
+	desc.transferQueueIndex = m_transfer_queue_index;
+	desc.graphicsQueue = m_graphics_queue;
+	desc.computeQueue = m_compute_queue;
+	desc.transferQueue = m_transfer_queue;
+
+	m_handle = nvrhi::vulkan::createDevice(desc);
+
+#ifndef NDEBUG
+	m_handle = nvrhi::validation::createValidationLayer(m_handle);
 #endif
 }
 
